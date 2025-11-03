@@ -448,7 +448,7 @@ def carregar_dados(ano=2025):
     url_aux = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/planilha_auxiliar.xlsx"
     df_aux = pd.read_excel(url_aux)
     df_aux = normalizar_colunas(df_aux)
-    url_empenho = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/planilha_base_notas_atualizada.xlsx"
+    url_empenho = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/planilha_notas_atualizada.xlsx"
     df_empenhos = pd.read_excel(url_empenho)
     df_empenhos = normalizar_colunas(df_empenhos)
     url_contrato = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/contratos.xlsx"
@@ -1990,3 +1990,4 @@ else:
 
 
     
+
