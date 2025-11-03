@@ -1418,18 +1418,19 @@ else:
     <style>
     .metrics-container {
         display: flex;
-        justify-content: space-between;
+        flex-wrap: wrap; /* permite quebra de linha */
         gap: 0.8rem;
         margin-bottom: 15px;
     }
     .metric-card {
-        flex: 1;
+        flex: 1 1 200px; /* grow, shrink, base width */
         background: #f7f9fc;
         border-radius: 12px;
         padding: 1rem;
         text-align: center;
         box-shadow: 0 2px 4px rgba(0,0,0,0.08);
         transition: transform 0.2s;
+        min-width: 180px; /* garante que não fique muito pequeno */
     }
     .metric-card:hover {
         transform: translateY(-3px);
@@ -1454,14 +1455,14 @@ else:
             <div class="metric-title">Total de Contratos</div>
             <div class="metric-value">{total_contratos}</div>
         </div>
-        '''<div class="metric-card">
+        <div class="metric-card">
             <div class="metric-title">💰 Valor Anual</div>
             <div class="metric-value">{formatar_real(total_valor_anual)}</div>
         </div>
         <div class="metric-card">
             <div class="metric-title">💰 Valor do Exercício</div>
             <div class="metric-value">{formatar_real(total_valor_exercicio)}</div>
-        </div>'''
+        </div>
         <div class="metric-card">
             <div class="metric-title">💰 Valor Empenhado</div>
             <div class="metric-value">{formatar_real(total_valor_empenhado)}</div>
