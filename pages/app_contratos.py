@@ -41,9 +41,9 @@ import base64
 # Função para carregar e preparar os dados
 @st.cache_data
 def carregar_dados():
-    #url = "https://raw.githubusercontent.com/eduardo130796/gestao_contratos/main/RELATORIO%20DE%20CONTRATOS%20VIGENTES%202025%20(1).xlsx"
-    #df = pd.read_excel(url)
-    df = pd.read_excel("contratos.xlsx")  # nome do seu arquivo
+    url = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/contratos.xlsx"
+    df = pd.read_excel(url)
+    #df = pd.read_excel("contratos.xlsx")  # nome do seu arquivo
 
     # Corrigir e converter valores monetários
     for col in ["VALOR ATUAL MENSAL", "VALOR ANUAL ATUAL", "VALOR GLOBAL"]:

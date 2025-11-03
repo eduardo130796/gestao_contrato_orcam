@@ -432,26 +432,26 @@ def visualizar_empenhos_unicos(mes_a_mes):
 @st.cache_data
 def carregar_dados(file_aux,file_empenhos,file_contratos, file_mes_a_mes,ano=2025):
     #uso local
-    df_aux = pd.read_excel(file_aux)
-    df_aux = normalizar_colunas(df_aux)
-    df_empenhos = pd.read_excel(file_empenhos)
-    df_empenhos = normalizar_colunas(df_empenhos)
-    df_contratos = pd.read_excel(file_contratos)
-    df_contratos = normalizar_colunas(df_contratos)
-    df_mes_a_mes = pd.read_excel(file_mes_a_mes, skiprows=2)
+    #df_aux = pd.read_excel(file_aux)
+    #df_aux = normalizar_colunas(df_aux)
+    #df_empenhos = pd.read_excel(file_empenhos)
+    #df_empenhos = normalizar_colunas(df_empenhos)
+    #df_contratos = pd.read_excel(file_contratos)
+    #df_contratos = normalizar_colunas(df_contratos)
+    #df_mes_a_mes = pd.read_excel(file_mes_a_mes, skiprows=2)
 
     #uso no git
-    #url_aux = "https://raw.githubusercontent.com/eduardo130796/gestao_contratos/main/planilha_auxiliar.xlsx"
-    #df_aux = pd.read_excel(url_aux)
-    #df_aux = normalizar_colunas(df_aux)
-    #url_empenho = "https://raw.githubusercontent.com/eduardo130796/gestao_contratos/main/planilha_base_notas.xlsx"
-    #df_empenhos = pd.read_excel(url_empenho)
-    #df_empenhos = normalizar_colunas(df_empenhos)
-    #url_contrato = "https://raw.githubusercontent.com/eduardo130796/gestao_contratos/main/RELATORIO%20DE%20CONTRATOS%20VIGENTES%202025%20(1).xlsx"
-    #df_contratos = pd.read_excel(url_contrato)
-    #df_contratos = normalizar_colunas(df_contratos)
-    #url_evol = "https://raw.githubusercontent.com/eduardo130796/gestao_contratos/main/relatorio%20evolucao%20mes%20a%20mes.xlsx"
-    #df_raw = pd.read_excel(url_evol)
+    url_aux = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/planilha_auxiliar.xlsx"
+    df_aux = pd.read_excel(url_aux)
+    df_aux = normalizar_colunas(df_aux)
+    url_empenho = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/planilha_base_notas_atualizada.xlsx"
+    df_empenhos = pd.read_excel(url_empenho)
+    df_empenhos = normalizar_colunas(df_empenhos)
+    url_contrato = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/contratos.xlsx"
+    df_contratos = pd.read_excel(url_contrato)
+    df_contratos = normalizar_colunas(df_contratos)
+    url_evol = "https://raw.githubusercontent.com/eduardo130796/gestao_contratos/main/relatorio%20evolucao%20mes%20a%20mes%20sem%20titulo.xlsx.xlsx"
+    df_mes_a_mes = pd.read_excel(url_evol)
     # Faz merge da coluna "tipo_de_gasto" no df_aux, se necessário
 
     if "tipo_de_gasto" not in df_aux.columns:
