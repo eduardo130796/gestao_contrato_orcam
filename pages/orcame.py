@@ -454,7 +454,7 @@ def carregar_dados(ano=2025):
     url_contrato = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/contratos.xlsx"
     df_contratos = pd.read_excel(url_contrato)
     df_contratos = normalizar_colunas(df_contratos)
-    url_evol = "https://raw.githubusercontent.com/eduardo130796/gestao_contratos/main/relatorio%20evolucao%20mes%20a%20mes%20sem%20titulo.xlsx.xlsx"
+    url_evol = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/relatorio%20evolucao%20mes%20a%20mes%20sem%20titulo.xlsx.xlsx"
     df_mes_a_mes = pd.read_excel(url_evol)
     # Faz merge da coluna "tipo_de_gasto" no df_aux, se necessário
 
@@ -1987,5 +1987,6 @@ else:
 
     # Exibe o html dentro do components.html sem scroll interno (o iframe terá a altura calculada)
     components.html(html_tabela, height=altura_final, scrolling=False)
+
 
     
