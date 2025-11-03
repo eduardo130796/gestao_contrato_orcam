@@ -10,6 +10,9 @@ import re
 import locale
 import streamlit.components.v1 as components
 
+
+
+
 #locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 # 3. Dicionário de nomes bonitos (para exibição/exportação)
 NOMES_BONITOS = {
@@ -430,7 +433,8 @@ def visualizar_empenhos_unicos(mes_a_mes):
 #    df_contratos = normalizar_colunas(df_contratos)
 
 @st.cache_data
-def carregar_dados(file_aux,file_empenhos,file_contratos, file_mes_a_mes,ano=2025):
+#def carregar_dados(file_aux,file_empenhos,file_contratos, file_mes_a_mes,ano=2025):
+def carregar_dados(ano=2025):
     #uso local
     #df_aux = pd.read_excel(file_aux)
     #df_aux = normalizar_colunas(df_aux)
@@ -597,12 +601,35 @@ def carregar_dados(file_aux,file_empenhos,file_contratos, file_mes_a_mes,ano=202
     #)
 
    
-file_aux='planilha_auxiliar.xlsx'
-file_empenhos='planilha_notas_atualizada (2).xlsx'
-file_contratos='contratos.xlsx'
-file_mes_a_mes = 'relatorio evolucao mes a mes sem titulo.xlsx'
-df_final, df_aux,df_detalhado,df_status,df_evolucao_empenho  = carregar_dados(file_aux,file_empenhos,file_contratos,file_mes_a_mes)
+#file_aux='planilha_auxiliar.xlsx'
+#file_empenhos='planilha_notas_atualizada (2).xlsx'
+#file_contratos='contratos.xlsx'
+#file_mes_a_mes = 'relatorio evolucao mes a mes sem titulo.xlsx'
+#df_final, df_aux,df_detalhado,df_status,df_evolucao_empenho  = carregar_dados(file_aux,file_empenhos,file_contratos,file_mes_a_mes)
+# Inicializa flags e dados
+if 'atualizar' not in st.session_state:
+    st.session_state['atualizar'] = True
+    st.session_state['df_final'] = None
+    st.session_state['df_aux'] = None
+    st.session_state['df_detalhado'] = None
+    st.session_state['df_status'] = None
+    st.session_state['df_evolucao_empenho'] = None
 
+
+
+# Carrega dados só se a flag estiver True
+if st.session_state['atualizar']:
+    st.session_state['df_final'], st.session_state['df_aux'], st.session_state['df_detalhado'], \
+    st.session_state['df_status'], st.session_state['df_evolucao_empenho'] = carregar_dados(
+    )
+    st.session_state['atualizar'] = False  # reseta a flag
+
+# Usa os dados
+df_final = st.session_state['df_final']
+df_aux = st.session_state['df_aux']
+df_detalhado = st.session_state['df_detalhado']
+df_status = st.session_state['df_status']
+df_evolucao_empenho = st.session_state['df_evolucao_empenho']
  ###########################################################
 
 #else:
@@ -694,6 +721,9 @@ contrato = st.sidebar.selectbox("Selecione um contrato", options=["Selecione um 
 if contrato != "Selecione um contrato":
     df_local = df_local[df_local["contrato"] == contrato]
     
+# Botão para atualizar
+if st.sidebar.button("🔄 Atualizar Dados"):
+    st.session_state['atualizar'] = True
 ############################################
 #
 #
