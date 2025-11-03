@@ -68,7 +68,7 @@ def calcular_proporcional(data_inicio, data_fim, valor_mensal):
 
     return round(total, 2)
 
-def calcular_valores(df_aux, ano_referencia):
+def calcular_valores(df_aux, ano_referencia,df_empenhos=None):
     fim_exercicio = datetime(ano_referencia, 12, 31)
     inicio_exercicio = datetime(ano_referencia, 1, 1)
     resultados = []
@@ -156,6 +156,88 @@ def calcular_valores(df_aux, ano_referencia):
             tipo_alteracao_ultimo = row["tipo_de_alteracao"]
             data_inicio_ultimo = row["data_inicio"]
 
+            # ✅ NOVO BLOCO — tratamento "sob demanda"
+        # ✅ NOVO BLOCO — tratamento "sob demanda"
+        # ✅ NOVO BLOCO — tratamento "sob demanda"
+        # ✅ NOVO BLOCO — tratamento "sob demanda" (considerando data de início)
+        if tipo_gasto == "sob demanda" and df_empenhos is not None:
+            df_filtrado = df_empenhos[df_empenhos["contrato"].astype(str) == str(contrato)]
+            if not df_filtrado.empty:
+                col_meses = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
+                col_meses_validas = [c for c in col_meses if c in df_filtrado.columns]
+
+                # Soma valores mensais e filtra meses com execução
+                valores_mensais = df_filtrado[col_meses_validas].sum()
+                meses_com_execucao = valores_mensais[valores_mensais > 0]
+
+                # Determina a data de início efetiva do grupo (considera início do exercício)
+                data_inicio_grupo = pd.Timestamp(grupo["data_inicio"].min()) if "data_inicio" in grupo.columns else inicio_exercicio
+                data_inicio_calc = max(data_inicio_grupo, inicio_exercicio)
+                data_fim_calc = fim_exercicio
+
+                if len(meses_com_execucao) >= 3:
+                    # Média normal — execução constante
+                    media_mensal = meses_com_execucao.mean()
+                    valor_mensal_ultimo = round(media_mensal, 2)
+                    # aplica proporcionalidade (da data_inicio_calc até fim do exercício)
+                    valor_anual_total = calcular_proporcional(data_inicio_calc, data_fim_calc, valor_mensal_ultimo)
+
+                elif len(meses_com_execucao) > 0:
+                    # Poucos meses de execução → busca histórico anterior
+                    cols_anteriores = [c for c in df_filtrado.columns if any(x in c for x in ["2023", "2024", "2022"])]
+                    historico = df_filtrado[cols_anteriores].sum().replace(0, pd.NA).dropna() if cols_anteriores else None
+
+                    if historico is not None and not historico.empty:
+                        media_historica = historico.mean()
+                        valor_mensal_ultimo = round(media_historica, 2)
+                        valor_anual_total = calcular_proporcional(data_inicio_calc, data_fim_calc, valor_mensal_ultimo)
+                    else:
+                        # Sem histórico → percentual estimado (ex: 30% do valor base) e proporcional
+                        valor_mensal_base = grupo["valor_mensal"].max() if "valor_mensal" in grupo.columns else 0
+                        valor_mensal_ultimo = round(valor_mensal_base * 0.3, 2)
+                        valor_anual_total = calcular_proporcional(data_inicio_calc, data_fim_calc, valor_mensal_ultimo)
+
+                else:
+                    # Nenhuma execução ainda → projeção conservadora proporcional
+                    valor_mensal_base = grupo["valor_mensal"].max() if "valor_mensal" in grupo.columns else 0
+                    valor_mensal_ultimo = round(valor_mensal_base * 0.3, 2)
+                    valor_anual_total = calcular_proporcional(data_inicio_calc, data_fim_calc, valor_mensal_ultimo)
+
+            # ✅ NOVO BLOCO — tratamento "adesão"
+        if tipo_gasto == "adesão" and df_empenhos is not None:
+            df_filtrado = df_empenhos[df_empenhos["contrato"].astype(str) == str(contrato)]
+            if not df_filtrado.empty:
+                col_meses = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
+                col_meses_validas = [c for c in col_meses if c in df_filtrado.columns]
+
+                # Soma os valores mensais do contrato
+                valores_mensais = df_filtrado[col_meses_validas].sum()
+
+                # Considera apenas meses com execução real (> 0)
+                meses_com_pagamento = valores_mensais[valores_mensais > 0]
+
+                if not meses_com_pagamento.empty:
+                    # Pega os últimos 3 meses com execução
+                    ultimos_3_meses = meses_com_pagamento.tail(3)
+                    media_3_meses = ultimos_3_meses.mean()
+                    valor_mensal_ultimo = round(media_3_meses, 2)
+
+                    # Define intervalo dentro do exercício
+                    data_inicio_calc = max(pd.Timestamp(grupo["data_inicio"].min()), inicio_exercicio)
+                    data_fim_calc = fim_exercicio
+
+                    # Cálculo proporcional usando sua função base
+                    valor_anual_total = calcular_proporcional(data_inicio_calc, data_fim_calc, valor_mensal_ultimo)
+
+                else:
+                    # Nenhum pagamento ainda → projeção conservadora
+                    valor_mensal_base = grupo["valor_mensal"].max() if "valor_mensal" in grupo.columns else 0
+                    valor_mensal_ultimo = round(valor_mensal_base * 0.3, 2)
+
+                    data_inicio_calc = max(pd.Timestamp(grupo["data_inicio"].min()), inicio_exercicio)
+                    data_fim_calc = fim_exercicio
+
+                    valor_anual_total = calcular_proporcional(data_inicio_calc, data_fim_calc, valor_mensal_ultimo)
         # ✅ Se houve qualquer valor válido (anterior ou durante 2025), registra no resultado
         if valor_mensal_ultimo is not None:
             resultados.append({
@@ -248,7 +330,7 @@ def calcular_status(df_aux, ano_referencia):
     return pd.DataFrame(status_resultados)
 
 def consolidar_dados(df_aux, df_empenhos,df_contratos, ano_referencia):
-    df_resultado = calcular_valores(df_aux, ano_referencia)
+    df_resultado = calcular_valores(df_aux, ano_referencia,df_empenhos)
     df_status = calcular_status(df_aux, ano_referencia)
 
     # Confere se existe a coluna tipo_de_gasto
@@ -433,7 +515,35 @@ def visualizar_empenhos_unicos(mes_a_mes):
 
 
 #@st.cache_data
-def carregar_dados(ano=2025):
+def carregar_dados(modo,ano=2025):
+
+    if modo == "git":
+        base_url = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/"
+        arquivos = {
+            "aux": base_url + "planilha_auxiliar.xlsx",
+            "empenhos": base_url + "planilha_notas_atualizada.xlsx",
+            "contratos": base_url + "contratos.xlsx",
+            "mes_a_mes": base_url + "evolucao_mes_a_mes.xlsx",
+        }
+    else:
+        arquivos = {
+            "aux": "planilha_auxiliar.xlsx",
+            "empenhos": "planilha_notas_atualizada.xlsx",
+            "contratos": "contratos.xlsx",
+            "mes_a_mes": "evolucao_mes_a_mes.xlsx",
+        }
+
+    # ====== Carregar os arquivos ======
+    df_aux = pd.read_excel(arquivos["aux"])
+    df_aux = normalizar_colunas(df_aux)
+
+    df_empenhos = pd.read_excel(arquivos["empenhos"])
+    df_empenhos = normalizar_colunas(df_empenhos)
+
+    df_contratos = pd.read_excel(arquivos["contratos"])
+    df_contratos = normalizar_colunas(df_contratos)
+
+    df_mes_a_mes = pd.read_excel(arquivos["mes_a_mes"], skiprows=2)
     #uso local
     #df_aux = pd.read_excel(file_aux)
     #df_aux = normalizar_colunas(df_aux)
@@ -443,17 +553,17 @@ def carregar_dados(ano=2025):
     #df_contratos = normalizar_colunas(df_contratos)
     #df_mes_a_mes = pd.read_excel(file_mes_a_mes, skiprows=2)
     #uso no git
-    url_aux = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/planilha_auxiliar.xlsx"
-    df_aux = pd.read_excel(url_aux)
-    df_aux = normalizar_colunas(df_aux)
-    url_empenho = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/planilha_notas_atualizada.xlsx"
-    df_empenhos = pd.read_excel(url_empenho)
-    df_empenhos = normalizar_colunas(df_empenhos)
-    url_contrato = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/contratos.xlsx"
-    df_contratos = pd.read_excel(url_contrato)
-    df_contratos = normalizar_colunas(df_contratos)
-    url_evol = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/evolucao_mes_a_mes.xlsx"
-    df_mes_a_mes = pd.read_excel(url_evol, skiprows=2)
+    #url_aux = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/planilha_auxiliar.xlsx"
+    #df_aux = pd.read_excel(url_aux)
+    #df_aux = normalizar_colunas(df_aux)
+    #url_empenho = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/planilha_notas_atualizada.xlsx"
+    #df_empenhos = pd.read_excel(url_empenho)
+    #df_empenhos = normalizar_colunas(df_empenhos)
+    #url_contrato = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/contratos.xlsx"
+    #df_contratos = pd.read_excel(url_contrato)
+    #df_contratos = normalizar_colunas(df_contratos)
+    #url_evol = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/evolucao_mes_a_mes.xlsx"
+    #df_mes_a_mes = pd.read_excel(url_evol, skiprows=2)
     # Faz merge da coluna "tipo_de_gasto" no df_aux, se necessário
 
     if "tipo_de_gasto" not in df_aux.columns:
@@ -598,12 +708,21 @@ def carregar_dados(ano=2025):
     #    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     #)
 
+#uso local
+#df_aux = pd.read_excel(file_aux)
+#df_aux = normalizar_colunas(df_aux)
+#df_empenhos = pd.read_excel(file_empenhos)
+#df_empenhos = normalizar_colunas(df_empenhos)
+#df_contratos = pd.read_excel(file_contratos)
+#df_contratos = normalizar_colunas(df_contratos)
+#df_mes_a_mes = pd.read_excel(file_mes_a_mes, skiprows=2)
+#uso no git
    
 #file_aux='planilha_auxiliar.xlsx'
 #file_empenhos='planilha_notas_atualizada (2).xlsx'
 #file_contratos='contratos.xlsx'
 #file_mes_a_mes = 'relatorio evolucao mes a mes sem titulo.xlsx'
-df_final, df_aux,df_detalhado,df_status,df_evolucao_empenho  = carregar_dados()
+df_final, df_aux,df_detalhado,df_status,df_evolucao_empenho  = carregar_dados('git')
 
  ###########################################################
 
