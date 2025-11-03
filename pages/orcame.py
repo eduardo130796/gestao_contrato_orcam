@@ -11,8 +11,6 @@ import locale
 import streamlit.components.v1 as components
 
 
-
-
 #locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 # 3. Dicionário de nomes bonitos (para exibição/exportação)
 NOMES_BONITOS = {
@@ -432,8 +430,9 @@ def visualizar_empenhos_unicos(mes_a_mes):
 #    df_contratos = pd.read_excel(file_contratos)
 #    df_contratos = normalizar_colunas(df_contratos)
 
-@st.cache_data
-#def carregar_dados(file_aux,file_empenhos,file_contratos, file_mes_a_mes,ano=2025):
+
+
+#@st.cache_data
 def carregar_dados(ano=2025):
     #uso local
     #df_aux = pd.read_excel(file_aux)
@@ -443,7 +442,6 @@ def carregar_dados(ano=2025):
     #df_contratos = pd.read_excel(file_contratos)
     #df_contratos = normalizar_colunas(df_contratos)
     #df_mes_a_mes = pd.read_excel(file_mes_a_mes, skiprows=2)
-
     #uso no git
     url_aux = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/planilha_auxiliar.xlsx"
     df_aux = pd.read_excel(url_aux)
@@ -454,8 +452,8 @@ def carregar_dados(ano=2025):
     url_contrato = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/contratos.xlsx"
     df_contratos = pd.read_excel(url_contrato)
     df_contratos = normalizar_colunas(df_contratos)
-    url_evol = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/relatorio%20evolucao%20mes%20a%20mes%20sem%20titulo.xlsx.xlsx"
-    df_mes_a_mes = pd.read_excel(url_evol)
+    url_evol = "https://raw.githubusercontent.com/eduardo130796/gestao_contrato_orcam/main/evolucao_mes_a_mes.xlsx"
+    df_mes_a_mes = pd.read_excel(url_evol, skiprows=2)
     # Faz merge da coluna "tipo_de_gasto" no df_aux, se necessário
 
     if "tipo_de_gasto" not in df_aux.columns:
@@ -605,31 +603,8 @@ def carregar_dados(ano=2025):
 #file_empenhos='planilha_notas_atualizada (2).xlsx'
 #file_contratos='contratos.xlsx'
 #file_mes_a_mes = 'relatorio evolucao mes a mes sem titulo.xlsx'
-#df_final, df_aux,df_detalhado,df_status,df_evolucao_empenho  = carregar_dados(file_aux,file_empenhos,file_contratos,file_mes_a_mes)
-# Inicializa flags e dados
-if 'atualizar' not in st.session_state:
-    st.session_state['atualizar'] = True
-    st.session_state['df_final'] = None
-    st.session_state['df_aux'] = None
-    st.session_state['df_detalhado'] = None
-    st.session_state['df_status'] = None
-    st.session_state['df_evolucao_empenho'] = None
+df_final, df_aux,df_detalhado,df_status,df_evolucao_empenho  = carregar_dados()
 
-
-
-# Carrega dados só se a flag estiver True
-if st.session_state['atualizar']:
-    st.session_state['df_final'], st.session_state['df_aux'], st.session_state['df_detalhado'], \
-    st.session_state['df_status'], st.session_state['df_evolucao_empenho'] = carregar_dados(
-    )
-    st.session_state['atualizar'] = False  # reseta a flag
-
-# Usa os dados
-df_final = st.session_state['df_final']
-df_aux = st.session_state['df_aux']
-df_detalhado = st.session_state['df_detalhado']
-df_status = st.session_state['df_status']
-df_evolucao_empenho = st.session_state['df_evolucao_empenho']
  ###########################################################
 
 #else:
@@ -721,9 +696,6 @@ contrato = st.sidebar.selectbox("Selecione um contrato", options=["Selecione um 
 if contrato != "Selecione um contrato":
     df_local = df_local[df_local["contrato"] == contrato]
     
-# Botão para atualizar
-if st.sidebar.button("🔄 Atualizar Dados"):
-    st.session_state['atualizar'] = True
 ############################################
 #
 #
@@ -1988,6 +1960,4 @@ else:
     # Exibe o html dentro do components.html sem scroll interno (o iframe terá a altura calculada)
     components.html(html_tabela, height=altura_final, scrolling=False)
 
-
     
-
