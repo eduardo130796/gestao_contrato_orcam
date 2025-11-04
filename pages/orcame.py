@@ -68,7 +68,7 @@ def calcular_proporcional(data_inicio, data_fim, valor_mensal):
 
     return round(total, 2)
 
-def calcular_valores(df_aux, ano_referencia,df_empenhos=None):
+def calcular_valores(df_aux, ano_referencia,df_empenhos=None, repactuacao_pct=10, reajuste_pct=0):
     fim_exercicio = datetime(ano_referencia, 12, 31)
     inicio_exercicio = datetime(ano_referencia, 1, 1)
     resultados = []
@@ -238,6 +238,98 @@ def calcular_valores(df_aux, ano_referencia,df_empenhos=None):
                     data_fim_calc = fim_exercicio
 
                     valor_anual_total = calcular_proporcional(data_inicio_calc, data_fim_calc, valor_mensal_ultimo)
+        
+                # ✅ BLOCO — tratamento "auxiliar"
+        if tipo_gasto == "AUXILIAR ADMINISTRATIVO" and df_empenhos is not None:
+            df_filtrado = df_empenhos[df_empenhos["contrato"].astype(str) == str(contrato)]
+            if not df_filtrado.empty:
+                col_meses = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"]
+                col_meses_validas = [c for c in col_meses if c in df_filtrado.columns]
+
+                # Soma valores por mês (tudo no exercício)
+                valores_mensais = df_filtrado[col_meses_validas].sum()
+                # Total pago no exercício até agora
+                soma_pago = valores_mensais.sum()
+
+                # Identifica o último mês com pagamento (index 1..12)
+                meses_com_valor = [ (i+1, v) for i, (m, v) in enumerate(zip(col_meses_validas, valores_mensais)) if v > 0 ]
+                if meses_com_valor:
+                    ultimo_mes_num = meses_com_valor[-1][0]  # 1..12 baseado em col_meses_validas ordem
+                else:
+                    ultimo_mes_num = None
+
+                # Determina data de início efetiva do grupo e intervalo de cálculo
+                data_inicio_grupo = pd.Timestamp(grupo["data_inicio"].min()) if "data_inicio" in grupo.columns and pd.notna(grupo["data_inicio"].min()) else inicio_exercicio
+                data_inicio_calc = max(data_inicio_grupo, inicio_exercicio)
+                data_fim_calc = fim_exercicio
+
+                if soma_pago > 0 and ultimo_mes_num is not None:
+                    # calcular quantos meses efetivos foram considerados entre data_inicio_calc e o último mês com pagamento
+                    # converte ultimo_mes_num para data do exercício
+                    ano = ano_referencia
+                    ultimo_mes_date = pd.Timestamp(ano, ultimo_mes_num, 1)
+                    # se data_inicio_calc for após esse ultimo_mes_date, considera 1 mês para evitar divisão por zero
+                    if data_inicio_calc > ultimo_mes_date:
+                        meses_intervalo = 1
+                    else:
+                        meses_intervalo = (ultimo_mes_date.year - data_inicio_calc.year) * 12 + (ultimo_mes_date.month - data_inicio_calc.month) + 1
+                        meses_intervalo = max(1, meses_intervalo)
+
+                    # média mensal baseada no período observado
+                    media_mensal_observada = soma_pago / meses_intervalo
+                    valor_mensal_ultimo = round(media_mensal_observada, 2)
+
+                    # aplica proporcionalidade do valor_mensal observado ao período restante (data_inicio_calc -> fim_exercicio)
+                    valor_anual_total = calcular_proporcional(data_inicio_calc, data_fim_calc, valor_mensal_ultimo)
+
+                else:
+                    # sem pagamentos no exercício -> fallback conservador (30% do valor base)
+                    valor_mensal_base = grupo["valor_mensal"].max() if "valor_mensal" in grupo.columns else 0
+                    valor_mensal_ultimo = round(valor_mensal_base * 0.3, 2)
+                    valor_anual_total = calcular_proporcional(data_inicio_calc, data_fim_calc, valor_mensal_ultimo)
+
+
+        # ✅ BLOCO — tratamento "locação" / "locacao"
+        if tipo_gasto in ("locação", "locacao",'LOCAÇÃO DE IMÓVEL') and df_empenhos is not None:
+            df_filtrado = None
+            if df_empenhos is not None:
+                df_filtrado = df_empenhos[df_empenhos["contrato"].astype(str) == str(contrato)]
+
+            percentual_extra_por_multiplas_notas = 0.10  # 10% extra se tiver mais de uma nota
+
+            # Base: valor mensal do contrato
+            valor_mensal_base = grupo["valor_mensal"].max() if "valor_mensal" in grupo.columns else 0
+
+            # Verifica se há múltiplas notas de empenho (pode indicar condomínio/IPTU)
+            n_notas = 0
+            if df_filtrado is not None and not df_filtrado.empty:
+                if "Nota de Empenho" in df_filtrado.columns:
+                    n_notas = df_filtrado["Nota de Empenho"].astype(str).replace("nan", "").replace("", pd.NA).dropna().nunique()
+                elif "nota_de_empenho" in df_filtrado.columns:
+                    n_notas = df_filtrado["nota_de_empenho"].astype(str).replace("nan", "").replace("", pd.NA).dropna().nunique()
+                else:
+                    n_notas = df_filtrado.shape[0]
+
+            # Aplica ajuste se houver mais de uma nota
+            if n_notas > 1:
+                valor_mensal_ajustado = valor_mensal_base * (1 + percentual_extra_por_multiplas_notas)
+            else:
+                valor_mensal_ajustado = valor_mensal_base
+
+            valor_mensal_ultimo = round(valor_mensal_ajustado, 2)
+
+            # Calcula valor anual proporcional respeitando data de início
+            data_inicio_grupo = (
+                pd.Timestamp(grupo["data_inicio"].min())
+                if "data_inicio" in grupo.columns and pd.notna(grupo["data_inicio"].min())
+                else inicio_exercicio
+            )
+            data_inicio_calc = max(data_inicio_grupo, inicio_exercicio)
+            data_fim_calc = fim_exercicio
+
+            valor_anual_total = calcular_proporcional(data_inicio_calc, data_fim_calc, valor_mensal_ultimo)
+        
+        
         # ✅ Se houve qualquer valor válido (anterior ou durante 2025), registra no resultado
         if valor_mensal_ultimo is not None:
             resultados.append({
@@ -514,7 +606,7 @@ def visualizar_empenhos_unicos(mes_a_mes):
 
 
 
-#@st.cache_data
+@st.cache_data
 def carregar_dados(modo,ano=2025):
 
     if modo == "git":
