@@ -68,7 +68,7 @@ def calcular_proporcional(data_inicio, data_fim, valor_mensal):
 
     return round(total, 2)
 
-def calcular_valores(df_aux, ano_referencia,df_empenhos=None, repactuacao_pct=10, reajuste_pct=0):
+def calcular_valores(df_aux, ano_referencia,df_empenhos=None):
     fim_exercicio = datetime(ano_referencia, 12, 31)
     inicio_exercicio = datetime(ano_referencia, 1, 1)
     resultados = []
